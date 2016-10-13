@@ -1,5 +1,6 @@
 import os, platform
 import sys
+import usb
 from socket import gethostname;
 from signal import signal, SIGINT
 #import daemon
@@ -52,7 +53,7 @@ except ImportError:
 		
 class Ct_Detector(object):
 	"""The detector class is the first layer where security alerts are being sent to analysis"""
-	def __init__(self, arg):
+	def __init__(self):
 		super(Ct_Detector, self).__init__()
 		#self.arg = arg
 	def mouse_clicked(self, x, y, button):
@@ -108,6 +109,19 @@ class Ct_Detector(object):
 
 	def is_terminal_on_BT(self):
 		print 1
+	def scan_for_existing_devices(self):
+		try:
+			# installed https://sourceforge.net/projects/libusb-win32/files/libusb-win32-releases/1.2.6.0/
+			for dev in usb.core.find(find_all=True):
+				#print dir(dev)
+				logging.info("Device: %s" % str(dev.product))
+				logging.info("  idVendor: %d (%s)" % (dev.idVendor, hex(dev.idVendor)))
+				logging.info("  idProduct: %d (%s)" % (dev.idProduct, hex(dev.idProduct)))
+			return True
+		except Exception,e:
+			logging.info("No device was found to be connected to the interactive terminal: ",e)
+			print e
+			return False
 
 class Ct_Analyzer(object):
 	"""Analyzer class determines whether to block or alert responsible personnel"""
@@ -142,6 +156,7 @@ class Ct_Updater(object):
 
 if __name__ == '__main__':
 	main = Main()
+	det = Ct_Detector()
 	### Weakly scan
 		#scan for large changed in file system
 
@@ -150,6 +165,8 @@ if __name__ == '__main__':
 
 	### Hourly scan
 		# scan for immediate risks
+	
+	#print det.scan_for_existing_devices() @Boolean
 
 	### Cron monitor in real-time
 		# scan and log externally supplied actions
