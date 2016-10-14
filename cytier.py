@@ -1,6 +1,5 @@
 import os, platform
 import sys
-import usb
 from socket import gethostname;
 from signal import signal, SIGINT
 #import daemon
@@ -109,8 +108,9 @@ class Ct_Detector(object):
 
 	def is_terminal_on_BT(self):
 		print 1
-	def scan_for_existing_devices(self):
+	def is_other_devices_connected(self):
 		try:
+			import usb
 			# installed https://sourceforge.net/projects/libusb-win32/files/libusb-win32-releases/1.2.6.0/
 			for dev in usb.core.find(find_all=True):
 				#print dir(dev)
@@ -120,9 +120,44 @@ class Ct_Detector(object):
 			return True
 		except Exception,e:
 			logging.info("No device was found to be connected to the interactive terminal: ",e)
-			print e
+			#print e
 			return False
+	def is_process_added(self,old_process_list):
+		"""This function checks if a process was added to the list"""
+		try:
+			#get current process list (add ",executablepath" to get paths as well)
+			pe_list = os.popen("wmic process get description")
+			
+			#clean the list
+			pe_list = [index.strip() for index in pe_list.readlines()] # stripping CMD spaces
+			logging("Current process list: \n",pe_list)
+			del pe_list[0] # deletes the "Descreption" header
+			pe_list = list(filter(None, pe_list)) # removing empty slots
+			
+			#diff old_process_list from new pe_list
+			return (set(old_process_list) - set(pe_list)) #prints 
 
+		except Exception,e:
+			logging.debug(e)
+			pass
+	def is_process_removed(self,old_process_list):
+		"""This function checks if a process was removed from the list"""
+		try:
+			#get current process list (add ",executablepath" to get paths as well)
+			pe_list = os.popen("wmic process get description")
+			
+			#clean the list
+			pe_list = [index.strip() for index in pe_list.readlines()] # stripping CMD spaces
+			logging("Current process list: \n",pe_list)
+			del pe_list[0] # deletes the "Descreption" header
+			pe_list = list(filter(None, pe_list)) # removing empty slots
+			
+			#diff pe_list from old_process_list
+			return (set(pe_list) - set(old_process_list))
+
+		except Exception,e:
+			logging.debug(e)
+			pass
 class Ct_Analyzer(object):
 	"""Analyzer class determines whether to block or alert responsible personnel"""
 	def __init__(self, arg):
@@ -155,7 +190,7 @@ class Ct_Updater(object):
 
 
 if __name__ == '__main__':
-	main = Main()
+	#main = Main()
 	det = Ct_Detector()
 	### Weakly scan
 		#scan for large changed in file system
@@ -166,11 +201,12 @@ if __name__ == '__main__':
 	### Hourly scan
 		# scan for immediate risks
 	
-	#print det.scan_for_existing_devices() @Boolean
-
+	print det.is_other_devices_connected()
+	
 	### Cron monitor in real-time
 		# scan and log externally supplied actions
 	#e = event()
 	#e.capture = False
 	#e.daemon = False
 	#e.start()
+	
